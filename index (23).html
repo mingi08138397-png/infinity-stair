@@ -1,0 +1,2354 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>무한의 계단 - 클론</title>
+<style>
+* {
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  background: #14161f;
+  overflow: hidden;
+  font-family: "Courier New", ui-monospace, monospace;
+  touch-action: none;
+}
+
+#stage {
+  position: relative;
+  width: 100%;
+  height: 100dvh;
+  max-width: 480px;
+  margin: 0 auto;
+  background: #202331;
+  overflow: hidden;
+  image-rendering: pixelated;
+}
+
+canvas#game {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  image-rendering: pixelated;
+}
+
+/* ---------- HUD ---------- */
+#hud {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  padding: 14px 14px 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  z-index: 5;
+  pointer-events: none;
+}
+
+#gaugeWrap {
+  flex: 1;
+  height: 20px;
+  background: #1a1c26;
+  border: 3px solid #0d0e14;
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: inset 0 2px 0 rgba(0,0,0,.4);
+}
+
+#gaugeFill {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(180deg, #ff8a4c, #e8482a);
+  transition: width 0.12s linear;
+}
+
+#floorLabel {
+  background: #ffe9a8;
+  border: 3px solid #7a5a1e;
+  border-radius: 8px;
+  padding: 4px 10px;
+  font-weight: bold;
+  color: #4a3210;
+  font-size: 20px;
+  min-width: 64px;
+  text-align: center;
+}
+
+#floorLabel small {
+  font-size: 12px;
+  margin-left: 2px;
+}
+
+#comboWrap {
+  position: relative;
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+}
+
+#comboWrap.hidden {
+  display: none;
+}
+
+#comboWrap svg {
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+}
+
+.comboBg {
+  fill: none;
+  stroke: rgba(255,255,255,0.16);
+  stroke-width: 5;
+}
+
+.comboFg {
+  fill: none;
+  stroke: #7ee8ff;
+  stroke-width: 5;
+  stroke-linecap: round;
+  stroke-dasharray: 113.1;
+  stroke-dashoffset: 113.1;
+  transition: stroke-dashoffset 0.15s linear;
+}
+
+#comboNum {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: bold;
+  color: #fff8e8;
+}
+
+#toast {
+  position: absolute;
+  left: 50%;
+  top: 14px;
+  transform: translate(-50%, -12px);
+  background: rgba(18, 19, 28, 0.94);
+  color: #fff8e8;
+  padding: 9px 16px;
+  border: 2px solid #3a3f58;
+  border-radius: 10px;
+  font-size: 13px;
+  z-index: 20;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s, transform 0.25s;
+  white-space: nowrap;
+}
+
+#toast.show {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+#btnMute {
+  pointer-events: auto;
+  width: 38px;
+  height: 38px;
+  flex-shrink: 0;
+  border: 3px solid #0d0e14;
+  border-radius: 8px;
+  background: #3a3f58;
+  color: #fff8e8;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+#btnMute:active {
+  background: #232636;
+}
+
+#btnSettings {
+  pointer-events: auto;
+  width: 38px;
+  height: 38px;
+  flex-shrink: 0;
+  border: 3px solid #0d0e14;
+  border-radius: 8px;
+  background: #3a3f58;
+  color: #fff8e8;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+#btnSettings:active {
+  background: #232636;
+}
+
+.smallBtn {
+  margin-top: 10px;
+  padding: 8px 22px;
+  font-size: 13px;
+  font-weight: bold;
+  color: #fff8e8;
+  background: #3a3f58;
+  border: 3px solid #20232f;
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.smallBtn:active {
+  transform: translateY(2px);
+}
+
+.settingsPanel {
+  width: 100%;
+  max-width: 280px;
+}
+
+.settingsRow {
+  width: 100%;
+  text-align: left;
+  margin-top: 16px;
+}
+
+.settingsRow label {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  margin-bottom: 6px;
+}
+
+.settingsRow input[type="range"] {
+  width: 100%;
+  accent-color: #ffd25a;
+}
+
+.keyRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.diffRow {
+  display: flex;
+  gap: 6px;
+}
+
+.diffBtn {
+  flex: 1;
+  padding: 8px 4px;
+  font-size: 12px;
+  font-weight: bold;
+  color: #cfd4e6;
+  background: #262a3c;
+  border: 3px solid #20232f;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.diffBtn.active {
+  color: #1a1608;
+  background: #ffd25a;
+  border-color: #a8781f;
+}
+
+.keyRow span {
+  font-size: 13px;
+}
+
+.keyBtn {
+  min-width: 84px;
+  padding: 8px 10px;
+  font-size: 13px;
+  font-weight: bold;
+  color: #4a3210;
+  background: #ffe9a8;
+  border: 3px solid #7a5a1e;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.keyBtn:active,
+.keyBtn.listening {
+  background: #ffd25a;
+}
+
+.settingsActions {
+  display: flex;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.settingsActions .smallBtn {
+  margin-top: 0;
+}
+
+/* ---------- Controls ---------- */
+#controls {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 22%;
+  min-height: 110px;
+  display: flex;
+  z-index: 5;
+}
+
+.ctrlBtn {
+  flex: 1;
+  border: none;
+  font-size: 42px;
+  font-weight: bold;
+  color: #fff8e8;
+  background: #3a3f58;
+  border-top: 4px solid #545a78;
+  cursor: pointer;
+  transition: background 0.05s;
+}
+
+.ctrlBtn:active,
+.ctrlBtn.pressed {
+  background: #232636;
+}
+
+#btnLeft {
+  border-right: 2px solid #14161f;
+}
+
+#btnRight {
+  border-left: 2px solid #14161f;
+}
+
+/* ---------- Overlays ---------- */
+.overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  background: rgba(10, 11, 18, 0.86);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  color: #fff8e8;
+  padding: 24px;
+  gap: 10px;
+}
+
+.overlay.hidden {
+  display: none;
+}
+
+.overlay h1 {
+  font-size: 28px;
+  margin: 0 0 6px;
+  color: #ffd25a;
+  text-shadow: 2px 2px 0 #7a4a10;
+}
+
+.overlay p {
+  margin: 0;
+  line-height: 1.5;
+  font-size: 15px;
+}
+
+.overlay p.small {
+  font-size: 12px;
+  opacity: 0.7;
+}
+
+.resultFloor {
+  font-size: 22px !important;
+}
+
+.resultFloor span {
+  font-size: 40px;
+  color: #ffd25a;
+  font-weight: bold;
+}
+
+.bigBtn {
+  margin-top: 16px;
+  padding: 14px 36px;
+  font-size: 18px;
+  font-weight: bold;
+  color: #4a3210;
+  background: #ffd25a;
+  border: 4px solid #b8871f;
+  border-radius: 12px;
+  cursor: pointer;
+}
+
+.bigBtn:active {
+  transform: translateY(2px);
+}
+
+.startBtnRow {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.shopBuyBtn {
+  margin-left: auto;
+  padding: 6px 10px;
+  font-size: 11px;
+  font-weight: bold;
+  color: #4a3210;
+  background: #ffd25a;
+  border: 2px solid #a8781f;
+  border-radius: 8px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.shopBuyBtn.owned {
+  background: #7ee88a;
+  border-color: #2fa84a;
+  color: #163a1e;
+}
+
+.shopBuyBtn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.achList {
+  width: 100%;
+  max-width: 320px;
+  max-height: 60vh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 6px 0;
+}
+
+.achItem {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  background: #232636;
+  border: 2px solid #3a3f58;
+  border-radius: 10px;
+  text-align: left;
+}
+
+.achItem.locked {
+  opacity: 0.45;
+}
+
+.achIcon {
+  font-size: 22px;
+  width: 30px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.achText {
+  display: flex;
+  flex-direction: column;
+}
+
+.achTitle {
+  font-size: 13px;
+  font-weight: bold;
+  color: #ffd25a;
+}
+
+.achDesc {
+  font-size: 11px;
+  opacity: 0.8;
+}
+</style>
+</head>
+<body>
+  <div id="stage">
+    <canvas id="game"></canvas>
+
+    <div id="hud">
+      <div id="gaugeWrap">
+        <div id="gaugeFill"></div>
+      </div>
+      <div id="floorLabel"><span id="floorNum">0</span><small>층</small></div>
+      <div id="comboWrap" class="hidden">
+        <svg viewBox="0 0 44 44">
+          <circle class="comboBg" cx="22" cy="22" r="18"></circle>
+          <circle class="comboFg" id="comboRing" cx="22" cy="22" r="18"></circle>
+        </svg>
+        <span id="comboNum">0</span>
+      </div>
+      <button id="btnSettings" aria-label="설정">⚙</button>
+      <button id="btnMute" aria-label="음소거 전환">🔊</button>
+    </div>
+    <div id="toast"></div>
+
+    <div id="controls">
+      <button id="btnLeft" class="ctrlBtn" aria-label="왼쪽">◀</button>
+      <button id="btnRight" class="ctrlBtn" aria-label="오른쪽">▶</button>
+    </div>
+
+    <div id="startScreen" class="overlay">
+      <h1>무한의 계단</h1>
+      <p>계단이 꺾이는 방향에 맞춰<br>왼쪽 / 오른쪽 버튼을 누르세요!</p>
+      <p class="small" id="keyHint">방향키(← →)로도 조작할 수 있어요</p>
+      <p class="small" id="bestFloorStart">최고 기록 0층</p>
+      <p class="small" id="coinBalanceStart">🪙 보유 코인 0개</p>
+      <button id="btnStart" class="bigBtn">시작하기</button>
+      <div class="startBtnRow">
+        <button id="btnSettingsStart" class="smallBtn">⚙ 설정</button>
+        <button id="btnAchievementsStart" class="smallBtn">🏆 업적</button>
+        <button id="btnShopStart" class="smallBtn">🛒 상점</button>
+      </div>
+    </div>
+
+    <div id="gameOverScreen" class="overlay hidden">
+      <h1 id="gameOverTitle">시간 초과!</h1>
+      <p class="resultFloor"><span id="finalFloor">0</span>층 도달</p>
+      <p class="small" id="bestFloorOver">최고 기록 0층</p>
+      <button id="btnRetry" class="bigBtn">다시하기</button>
+      <div class="startBtnRow">
+        <button id="btnShare" class="smallBtn">📤 공유</button>
+        <button id="btnSettingsOver" class="smallBtn">⚙ 설정</button>
+        <button id="btnAchievementsOver" class="smallBtn">🏆 업적</button>
+        <button id="btnShopOver" class="smallBtn">🛒 상점</button>
+      </div>
+    </div>
+
+    <div id="settingsScreen" class="overlay hidden">
+      <h1>설정</h1>
+      <div class="settingsPanel">
+        <div class="settingsRow">
+          <label>난이도</label>
+          <div class="diffRow">
+            <button class="diffBtn" id="btnDiffEasy" data-diff="easy">쉬움</button>
+            <button class="diffBtn" id="btnDiffNormal" data-diff="normal">보통</button>
+            <button class="diffBtn" id="btnDiffHard" data-diff="hard">어려움</button>
+          </div>
+          <p class="small" id="diffDesc" style="margin-top:6px;"></p>
+        </div>
+        <div class="settingsRow">
+          <label>배경음 볼륨 <span id="bgmVolLabel">45%</span></label>
+          <input type="range" id="bgmVolRange" min="0" max="100" value="45">
+        </div>
+        <div class="settingsRow">
+          <label>효과음 볼륨 <span id="sfxVolLabel">60%</span></label>
+          <input type="range" id="sfxVolRange" min="0" max="100" value="60">
+        </div>
+        <div class="settingsRow keyRow">
+          <span>왼쪽 이동 키</span>
+          <button id="btnBindLeft" class="keyBtn">←</button>
+        </div>
+        <div class="settingsRow keyRow">
+          <span>오른쪽 이동 키</span>
+          <button id="btnBindRight" class="keyBtn">→</button>
+        </div>
+        <p class="small" style="margin-top:10px;">키 버튼을 누른 뒤, 사용할 키를 입력하세요.</p>
+        <div class="settingsActions">
+          <button id="btnResetSettings" class="smallBtn">기본값</button>
+          <button id="btnCloseSettings" class="smallBtn">닫기</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="achievementsScreen" class="overlay hidden">
+      <h1>업적</h1>
+      <div class="achList" id="achList"></div>
+      <button id="btnCloseAchievements" class="smallBtn">닫기</button>
+    </div>
+
+    <div id="shopScreen" class="overlay hidden">
+      <h1>상점</h1>
+      <p class="small" id="coinBalanceShop">🪙 보유 코인 0개</p>
+      <p class="small" style="margin-top:8px;">스킨</p>
+      <div class="achList" id="shopSkinList"></div>
+      <p class="small" style="margin-top:4px;">업그레이드</p>
+      <div class="achList" id="shopUpgradeList"></div>
+      <button id="btnCloseShop" class="smallBtn">닫기</button>
+    </div>
+  </div>
+
+  <script>
+  (() => {
+    "use strict";
+
+    // ---------- Canvas setup ----------
+    const stage = document.getElementById("stage");
+    const canvas = document.getElementById("game");
+    const ctx = canvas.getContext("2d");
+
+    let dpr = Math.max(1, window.devicePixelRatio || 1);
+    let viewW = 0, viewH = 0;
+
+    function resize() {
+      const rect = stage.getBoundingClientRect();
+      viewW = rect.width;
+      viewH = rect.height;
+      dpr = Math.max(1, window.devicePixelRatio || 1);
+      canvas.width = Math.round(viewW * dpr);
+      canvas.height = Math.round(viewH * dpr);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
+    window.addEventListener("resize", resize);
+    resize();
+
+    // ---------- Constants ----------
+    const STEP_DX = 46;   // horizontal distance per step (world units)
+    const STEP_DY = 44;   // vertical rise per step
+    const ANIM_MS = 140;  // step animation duration
+    const STUMBLE_MS = 220;
+
+    const TIME_MAX = 100;        // timer bar units, full at game start
+    const BASE_DRAIN_RATE = 9;   // units/sec passively drained
+    const TIME_BONUS = 7;        // units restored per correct step
+
+    // ---------- Game state ----------
+    let state = "start"; // start | playing | gameover
+    let steps = [];       // {x, y, dir}  dir: 'L' | 'R' — direction needed to step onto this from previous
+    let currentIndex = 0;
+    let curDir = "R";
+    let runRemaining = 3;
+
+    let charPos = { x: 0, y: 0 };   // rendered (animated) position, world coords
+    let animFrom = null, animTo = null, animStart = 0, animKind = null; // 'move' | 'stumble'
+    let isAnimating = false;
+
+    let timeLeft = TIME_MAX;
+    let timeMax = TIME_MAX;   // 헤드스타트 업그레이드 구매 시 TIME_MAX보다 커질 수 있음
+    let floor = 0;
+    let elapsedPlaying = 0;
+    let lastTime = 0;
+
+    let camera = { x: 0, y: 0 };
+    let shake = 0;
+
+    let combo = 0;              // 연속 정타 카운트
+    let maxComboThisRun = 0;    // 이번 판에서 도달한 최대 콤보 (업적 판정용)
+    let floatTexts = [];        // { x, y, text, color, start, life }
+    let sparkles = [];          // { x, y, vx, vy, start, life, color }
+    let crackDeadline = null;   // 붕괴 계단 위에서 탈출해야 하는 시각(ms, performance.now 기준)
+
+    // 번개 기믹 — 특정 계단을 예고 후 낙뢰가 때림. 그 순간 그 계단 위에 있으면
+    // 감전(스턴)되고, 타이밍을 맞춰 지나가면(먼저 지나가거나 늦게 밟으면) 회피된다.
+    let lightning = null;       // { targetIndex, strikeAt, resolved, hit, resolvedAt }
+    let nextLightningAt = 0;    // 다음 낙뢰 예약 시각(ms, performance.now 기준)
+    let stunUntil = 0;          // 이 시각까지는 조작이 먹히지 않음(ms, performance.now 기준)
+
+    // 얼음 계단 — 밟는 순간 미끄러져서 잠깐 조작이 먹히지 않는다
+    let iceSlideUntil = 0;      // 이 시각까지는 조작이 먹히지 않음(ms, performance.now 기준)
+
+    // 돌풍 기믹 — 계단 위치와 무관하게 예고 후 일정 시간 동안 화면 전체를 휩쓸고 지나간다.
+    // 조작 자체를 막지는 않지만, 발동 중에는 게이지가 더 빨리 닳아서 순간적인 압박을 준다.
+    let wind = null;            // { warnAt, startAt, endAt }
+    let nextWindAt = 0;         // 다음 돌풍 예약 시각(ms, performance.now 기준)
+
+    const BEST_KEY = "infiniteStairs.bestFloor";
+    let bestFloor = loadBest();
+    function loadBest() {
+      try { return parseInt(localStorage.getItem(BEST_KEY) || "0", 10) || 0; }
+      catch (e) { return 0; }
+    }
+    function saveBest(v) {
+      try { localStorage.setItem(BEST_KEY, String(v)); } catch (e) {}
+    }
+
+    // ---------- 업적(재방문 유도용 메타 진행 요소) ----------
+    const ACH_KEY = "infiniteStairs.achievements.v1";
+    const ACHIEVEMENTS = [
+      { id: "floor_100", title: "100층 클럽", desc: "100층에 도달하세요", icon: "🏢",
+        check: (run) => run.floor >= 100 },
+      { id: "floor_300", title: "300층 클럽", desc: "300층에 도달하세요", icon: "🏙️",
+        check: (run) => run.floor >= 300 },
+      { id: "floor_500", title: "구름 위 산책자", desc: "500층에 도달하세요", icon: "☁️",
+        check: (run) => run.floor >= 500 },
+      { id: "space_reach", title: "우주 탐험가", desc: "우주 구역(150층)에 도달하세요", icon: "🪐",
+        check: (run) => run.floor >= 150 },
+      { id: "combo_20", title: "콤보 마스터", desc: "한 판에서 20콤보를 달성하세요", icon: "🔥",
+        check: (run) => run.maxCombo >= 20 },
+      { id: "lightning_dodge_10", title: "번개 회피자", desc: "낙뢰를 누적 10회 회피하세요", icon: "⚡",
+        check: (run, cum) => cum.lightningDodge >= 10 },
+    ];
+
+    function loadAchievements() {
+      try {
+        const raw = localStorage.getItem(ACH_KEY);
+        const parsed = raw ? JSON.parse(raw) : {};
+        return { unlocked: {}, lightningDodge: 0, ...parsed };
+      } catch (e) {
+        return { unlocked: {}, lightningDodge: 0 };
+      }
+    }
+    function saveAchievements() {
+      try { localStorage.setItem(ACH_KEY, JSON.stringify(achData)); } catch (e) {}
+    }
+    let achData = loadAchievements();
+
+    // ---------- 상점(코인 · 스킨 · 업그레이드) ----------
+    // 골드 계단(+1), 마일스톤(+5), 판 종료 시 도달 거리 보너스로 코인을 모아
+    // 캐릭터 스킨이나 영구 업그레이드를 구매할 수 있다.
+    const SKINS = [
+      { id: "default", title: "기본 정장", desc: "처음부터 보유하고 있어요", icon: "🧑", cost: 0,
+        colors: { skin: "#f0c090", hair: "#2b2118", shirt: "#2f5fa8", pants: "#28324a", tie: "#c23a3a" } },
+      { id: "red", title: "레드 슈트", desc: "정열적인 빨간 정장", icon: "🔴", cost: 30,
+        colors: { skin: "#f0c090", hair: "#2b2118", shirt: "#a83030", pants: "#3a1e1e", tie: "#1a1a1a" } },
+      { id: "green", title: "그린 슈트", desc: "차분한 초록 정장", icon: "🟢", cost: 50,
+        colors: { skin: "#f0c090", hair: "#2b2118", shirt: "#2f8a52", pants: "#1e3a28", tie: "#1a1a1a" } },
+      { id: "gold", title: "골드 슈트", desc: "걸을 때마다 은은하게 반짝여요", icon: "🟡", cost: 100,
+        colors: { skin: "#f0c090", hair: "#2b2118", shirt: "#e0b040", pants: "#5a4310", tie: "#8a5a10" }, sparkle: true },
+    ];
+    const UPGRADES = [
+      { id: "headstart", title: "헤드스타트", desc: "게임 시작 시 게이지를 +15만큼 더 채운 채 시작해요", icon: "🚀", cost: 60 },
+      { id: "luckyhand", title: "행운의 손", desc: "황금 계단 등장 확률이 20% 늘어나요", icon: "🍀", cost: 80 },
+    ];
+
+    const SHOP_KEY = "infiniteStairs.shop.v1";
+    function loadShop() {
+      try {
+        const raw = localStorage.getItem(SHOP_KEY);
+        const parsed = raw ? JSON.parse(raw) : {};
+        return { coins: 0, ownedSkins: ["default"], equippedSkin: "default", upgrades: {}, ...parsed };
+      } catch (e) {
+        return { coins: 0, ownedSkins: ["default"], equippedSkin: "default", upgrades: {} };
+      }
+    }
+    function saveShop() {
+      try { localStorage.setItem(SHOP_KEY, JSON.stringify(shopData)); } catch (e) {}
+    }
+    let shopData = loadShop();
+
+    function getEquippedSkin() {
+      return SKINS.find((s) => s.id === shopData.equippedSkin) || SKINS[0];
+    }
+
+    function updateCoinLabels() {
+      const a = document.getElementById("coinBalanceStart");
+      const b = document.getElementById("coinBalanceShop");
+      if (a) a.textContent = "🪙 보유 코인 " + shopData.coins + "개";
+      if (b) b.textContent = "🪙 보유 코인 " + shopData.coins + "개";
+    }
+
+    function renderShop() {
+      const skinListEl = document.getElementById("shopSkinList");
+      const upgListEl = document.getElementById("shopUpgradeList");
+      if (!skinListEl || !upgListEl) return;
+
+      skinListEl.innerHTML = SKINS.map((s) => {
+        const owned = shopData.ownedSkins.includes(s.id);
+        const equipped = shopData.equippedSkin === s.id;
+        const btnLabel = equipped ? "장착중" : owned ? "장착" : "🪙" + s.cost;
+        const btnClass = "shopBuyBtn" + (equipped ? " owned" : "");
+        const disabled = equipped ? "disabled" : (!owned && shopData.coins < s.cost) ? "disabled" : "";
+        return `
+          <div class="achItem">
+            <div class="achIcon">${s.icon}</div>
+            <div class="achText">
+              <span class="achTitle">${s.title}</span>
+              <span class="achDesc">${s.desc}</span>
+            </div>
+            <button class="${btnClass}" data-skin="${s.id}" ${disabled}>${btnLabel}</button>
+          </div>`;
+      }).join("");
+
+      upgListEl.innerHTML = UPGRADES.map((u) => {
+        const owned = !!shopData.upgrades[u.id];
+        const btnLabel = owned ? "보유중" : "🪙" + u.cost;
+        const btnClass = "shopBuyBtn" + (owned ? " owned" : "");
+        const disabled = owned ? "disabled" : shopData.coins < u.cost ? "disabled" : "";
+        return `
+          <div class="achItem">
+            <div class="achIcon">${u.icon}</div>
+            <div class="achText">
+              <span class="achTitle">${u.title}</span>
+              <span class="achDesc">${u.desc}</span>
+            </div>
+            <button class="${btnClass}" data-upgrade="${u.id}" ${disabled}>${btnLabel}</button>
+          </div>`;
+      }).join("");
+
+      updateCoinLabels();
+
+      skinListEl.querySelectorAll("button[data-skin]").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const id = btn.dataset.skin;
+          const skin = SKINS.find((s) => s.id === id);
+          if (!skin) return;
+          playSfx("click");
+          if (shopData.ownedSkins.includes(id)) {
+            shopData.equippedSkin = id;
+          } else if (shopData.coins >= skin.cost) {
+            shopData.coins -= skin.cost;
+            shopData.ownedSkins.push(id);
+            shopData.equippedSkin = id;
+          }
+          saveShop();
+          renderShop();
+        });
+      });
+      upgListEl.querySelectorAll("button[data-upgrade]").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const id = btn.dataset.upgrade;
+          const upg = UPGRADES.find((u) => u.id === id);
+          if (!upg || shopData.upgrades[id]) return;
+          if (shopData.coins < upg.cost) return;
+          playSfx("click");
+          shopData.coins -= upg.cost;
+          shopData.upgrades[id] = true;
+          saveShop();
+          renderShop();
+        });
+      });
+    }
+
+    function openShop() {
+      renderShop();
+      document.getElementById("shopScreen").classList.remove("hidden");
+    }
+    function closeShop() {
+      document.getElementById("shopScreen").classList.add("hidden");
+    }
+
+    // 업적 달성 여부를 검사하고, 새로 달성한 것이 있으면 토스트로 알려준다.
+    // run: 이번 판 진행 상황(층수, 최대 콤보 등) / achData.lightningDodge 같은
+    // 누적치는 achData 자체를 참조한다.
+    function checkAchievements(run) {
+      for (const a of ACHIEVEMENTS) {
+        if (achData.unlocked[a.id]) continue;
+        if (a.check(run, achData)) {
+          achData.unlocked[a.id] = true;
+          saveAchievements();
+          showToast("🏆 업적 달성: " + a.title);
+          if (typeof renderAchievements === "function" && !achievementsScreen.classList.contains("hidden")) {
+            renderAchievements();
+          }
+        }
+      }
+    }
+
+    const keys = {};
+
+    // ---------- Audio ----------
+    const bgm = new Audio("audio/bgm.mp3");
+    bgm.loop = true;
+
+    const sfxSources = {
+      step: "audio/step.wav",
+      miss: "audio/miss.wav",
+      click: "audio/click.wav",
+      gameover: "audio/gameover.mp3",
+    };
+    const sfx = {};
+    for (const key in sfxSources) sfx[key] = new Audio(sfxSources[key]);
+
+    let muted = false;
+
+    // ---------- Settings (볼륨 / 키 설정) ----------
+    // 난이도 프리셋 — 확률만 다른 게 아니라 "등장하는 기믹 종류" 자체가 다르다.
+    //  쉬움  : 위협 기믹 없음. 회복을 도와주는 황금 계단만 등장하는 순수한 기본 플레이
+    //  보통  : 기존 핵심 기믹인 붕괴 계단이 추가됨
+    //  어려움: 얼음 + 번개까지 전부 등장하고, 빈도도 전체적으로 더 높음
+    // crackChance/iceChance를 0으로, lightningStartFloor를 Infinity로 두면
+    // 해당 기믹이 아예 등장하지 않는다.
+    // (settings보다 먼저 선언해야 한다 — 아래 applySettings()의 최초 호출이
+    //  이 값들을 즉시 참조하기 때문에, 순서가 바뀌면 초기화 전 접근 오류가 난다)
+    const DIFFICULTY_PRESETS = {
+      easy: {
+        label: "쉬움", drainMult: 0.8,
+        goldChance: 0.10, crackChance: 0, iceChance: 0, lightningStartFloor: Infinity,
+      },
+      normal: {
+        label: "보통", drainMult: 1.0,
+        goldChance: 0.07, crackChance: 0.06, iceChance: 0, lightningStartFloor: Infinity,
+      },
+      hard: {
+        label: "어려움", drainMult: 1.2,
+        goldChance: 0.05, crackChance: 0.08, iceChance: 0.08, lightningStartFloor: 14,
+      },
+    };
+    const DIFFICULTY_DESC = {
+      easy: "위협 기믹 없이 황금 계단(회복 보너스)만 등장하는 기본 모드",
+      normal: "붕괴 계단이 추가로 등장합니다",
+      hard: "붕괴 + 얼음 + 번개까지 모든 기믹이 높은 빈도로 등장합니다",
+    };
+    function getDifficulty() {
+      return DIFFICULTY_PRESETS[settings.difficulty] || DIFFICULTY_PRESETS.normal;
+    }
+
+    const SETTINGS_KEY = "infiniteStairs.settings.v1";
+    const DEFAULT_SETTINGS = {
+      bgmVolume: 45,
+      sfxVolume: 60,
+      leftKey: "ArrowLeft",
+      rightKey: "ArrowRight",
+      difficulty: "normal",
+    };
+
+    function loadSettings() {
+      try {
+        const raw = localStorage.getItem(SETTINGS_KEY);
+        if (!raw) return { ...DEFAULT_SETTINGS };
+        return { ...DEFAULT_SETTINGS, ...JSON.parse(raw) };
+      } catch (e) {
+        return { ...DEFAULT_SETTINGS };
+      }
+    }
+    function saveSettings() {
+      try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)); } catch (e) {}
+    }
+
+    let settings = loadSettings();
+    let settingsOpen = false;
+    let awaitingBind = null; // 'left' | 'right' | null
+
+    const KEY_LABELS = {
+      ArrowLeft: "←", ArrowRight: "→", ArrowUp: "↑", ArrowDown: "↓",
+      Space: "Space", Enter: "Enter", ShiftLeft: "Shift", ShiftRight: "Shift",
+    };
+    function keyLabel(code) {
+      if (!code) return "-";
+      if (KEY_LABELS[code]) return KEY_LABELS[code];
+      if (code.startsWith("Key")) return code.slice(3);
+      if (code.startsWith("Digit")) return code.slice(5);
+      return code;
+    }
+
+    function playSfx(name) {
+      if (muted) return;
+      const src = sfx[name];
+      const node = src.cloneNode();
+      const base = name === "gameover" ? 0.8 : 0.6;
+      node.volume = Math.max(0, Math.min(1, base * (settings.sfxVolume / 100)));
+      node.play().catch(() => {});
+    }
+
+    function setMuted(next) {
+      muted = next;
+      bgm.muted = muted;
+      btnMute.textContent = muted ? "🔇" : "🔊";
+    }
+
+    const btnMute = document.getElementById("btnMute");
+    btnMute.addEventListener("click", () => setMuted(!muted));
+
+    // ---------- Settings UI ----------
+    const btnSettings = document.getElementById("btnSettings");
+    const btnSettingsStart = document.getElementById("btnSettingsStart");
+    const btnSettingsOver = document.getElementById("btnSettingsOver");
+    const settingsScreen = document.getElementById("settingsScreen");
+    const bgmVolRange = document.getElementById("bgmVolRange");
+    const sfxVolRange = document.getElementById("sfxVolRange");
+    const bgmVolLabel = document.getElementById("bgmVolLabel");
+    const sfxVolLabel = document.getElementById("sfxVolLabel");
+    const btnBindLeft = document.getElementById("btnBindLeft");
+    const btnBindRight = document.getElementById("btnBindRight");
+    const btnResetSettings = document.getElementById("btnResetSettings");
+    const btnCloseSettings = document.getElementById("btnCloseSettings");
+    const diffButtons = {
+      easy: document.getElementById("btnDiffEasy"),
+      normal: document.getElementById("btnDiffNormal"),
+      hard: document.getElementById("btnDiffHard"),
+    };
+    for (const key in diffButtons) {
+      diffButtons[key].addEventListener("click", () => {
+        playSfx("click");
+        settings.difficulty = key;
+        saveSettings();
+        applySettings();
+      });
+    }
+
+    function applySettings() {
+      for (const key in diffButtons) {
+        diffButtons[key].classList.toggle("active", settings.difficulty === key);
+      }
+      const diffDescEl = document.getElementById("diffDesc");
+      if (diffDescEl) diffDescEl.textContent = DIFFICULTY_DESC[settings.difficulty] || "";
+      bgm.volume = settings.bgmVolume / 100;
+      bgmVolRange.value = settings.bgmVolume;
+      bgmVolLabel.textContent = settings.bgmVolume + "%";
+      sfxVolRange.value = settings.sfxVolume;
+      sfxVolLabel.textContent = settings.sfxVolume + "%";
+      btnBindLeft.textContent = keyLabel(settings.leftKey);
+      btnBindRight.textContent = keyLabel(settings.rightKey);
+      btnBindLeft.classList.remove("listening");
+      btnBindRight.classList.remove("listening");
+      const hintEl = document.getElementById("keyHint");
+      if (hintEl) {
+        hintEl.textContent = `키보드 [${keyLabel(settings.leftKey)}] / [${keyLabel(settings.rightKey)}] 로도 조작할 수 있어요`;
+      }
+    }
+    applySettings();
+
+    function openSettings() {
+      settingsOpen = true;
+      awaitingBind = null;
+      settingsScreen.classList.remove("hidden");
+    }
+    function closeSettings() {
+      settingsOpen = false;
+      awaitingBind = null;
+      applySettings();
+      settingsScreen.classList.add("hidden");
+    }
+
+    btnSettings.addEventListener("click", () => { playSfx("click"); openSettings(); });
+    btnSettingsStart.addEventListener("click", () => { playSfx("click"); openSettings(); });
+    btnSettingsOver.addEventListener("click", () => { playSfx("click"); openSettings(); });
+
+    // ---------- 업적 화면 ----------
+    const achievementsScreen = document.getElementById("achievementsScreen");
+    const achListEl = document.getElementById("achList");
+
+    function renderAchievements() {
+      achListEl.innerHTML = ACHIEVEMENTS.map((a) => {
+        const unlocked = !!achData.unlocked[a.id];
+        return `
+          <div class="achItem ${unlocked ? "" : "locked"}">
+            <div class="achIcon">${unlocked ? a.icon : "🔒"}</div>
+            <div class="achText">
+              <span class="achTitle">${a.title}</span>
+              <span class="achDesc">${a.desc}</span>
+            </div>
+          </div>`;
+      }).join("");
+    }
+    function openAchievements() {
+      renderAchievements();
+      achievementsScreen.classList.remove("hidden");
+    }
+    function closeAchievements() {
+      achievementsScreen.classList.add("hidden");
+    }
+    document.getElementById("btnAchievementsStart").addEventListener("click", () => { playSfx("click"); openAchievements(); });
+    document.getElementById("btnAchievementsOver").addEventListener("click", () => { playSfx("click"); openAchievements(); });
+    document.getElementById("btnCloseAchievements").addEventListener("click", () => { playSfx("click"); closeAchievements(); });
+
+    document.getElementById("btnShopStart").addEventListener("click", () => { playSfx("click"); openShop(); });
+    document.getElementById("btnShopOver").addEventListener("click", () => { playSfx("click"); openShop(); });
+    document.getElementById("btnCloseShop").addEventListener("click", () => { playSfx("click"); closeShop(); });
+
+    // ---------- 결과 공유 ----------
+    document.getElementById("btnShare").addEventListener("click", async () => {
+      playSfx("click");
+      const text = `무한의 계단에서 ${floor}층까지 올라갔어요! (최고 기록 ${bestFloor}층)`;
+      try {
+        if (navigator.share) {
+          await navigator.share({ title: "무한의 계단", text });
+        } else if (navigator.clipboard) {
+          await navigator.clipboard.writeText(text);
+          showToast("결과가 클립보드에 복사되었습니다!");
+        } else {
+          showToast(text);
+        }
+      } catch (e) {
+        // 사용자가 공유 시트를 취소한 경우 등은 조용히 무시
+      }
+    });
+    btnCloseSettings.addEventListener("click", () => { playSfx("click"); closeSettings(); });
+
+    btnResetSettings.addEventListener("click", () => {
+      settings = { ...DEFAULT_SETTINGS };
+      saveSettings();
+      applySettings();
+      playSfx("click");
+    });
+
+    bgmVolRange.addEventListener("input", () => {
+      settings.bgmVolume = parseInt(bgmVolRange.value, 10);
+      bgmVolLabel.textContent = settings.bgmVolume + "%";
+      bgm.volume = settings.bgmVolume / 100;
+      saveSettings();
+    });
+    sfxVolRange.addEventListener("input", () => {
+      settings.sfxVolume = parseInt(sfxVolRange.value, 10);
+      sfxVolLabel.textContent = settings.sfxVolume + "%";
+      saveSettings();
+    });
+    sfxVolRange.addEventListener("change", () => playSfx("step"));
+
+    function startBind(which, btnEl) {
+      awaitingBind = which;
+      btnEl.textContent = "키 입력...";
+      btnEl.classList.add("listening");
+    }
+    btnBindLeft.addEventListener("click", () => startBind("left", btnBindLeft));
+    btnBindRight.addEventListener("click", () => startBind("right", btnBindRight));
+
+    // ---------- Step generation ----------
+    function makeStartStep() {
+      return { x: 0, y: 0, dir: null, special: null };
+    }
+
+    // 황금 계단(아이템 계단) 설정
+    const GOLD_MIN_INDEX = 10;     // 이 인덱스 이후부터 등장
+    const GOLD_TIME_BONUS = 16;    // 황금 계단을 밟았을 때 추가 회복량
+
+    // 붕괴 계단(위태로운 계단) 설정 — 밟은 뒤 일정 시간 안에 다음 계단으로
+    // 넘어가지 못하면 무너져서 게임오버
+    const CRACK_MIN_INDEX = 14;
+    const CRACK_TIME_MS = 850;
+
+    // 얼음 계단 설정 — 밟는 순간 미끄러져서 잠깐 조작이 먹히지 않는다
+    const ICE_MIN_INDEX = 12;
+    const ICE_SLIDE_MS = 260;
+
+    // 번개 기믹 설정 — 예고 후 특정 계단에 낙뢰가 떨어짐
+    const LIGHTNING_WARN_MS = 1000;      // 예고 표시~낙뢰까지 걸리는 시간
+    const LIGHTNING_STUN_MS = 1100;      // 맞았을 때 스턴(조작 불가) 시간
+    const LIGHTNING_GAP_MIN_MS = 3200;   // 낙뢰 간 최소 간격
+    const LIGHTNING_GAP_MAX_MS = 5600;   // 낙뢰 간 최대 간격
+    const LIGHTNING_AHEAD_MIN = 2;       // 현재 위치보다 최소 몇 칸 앞을 노릴지
+    const LIGHTNING_AHEAD_MAX = 4;       // 최대 몇 칸 앞을 노릴지
+
+    // 돌풍 기믹 설정
+    const WIND_START_FLOOR = 25;         // 이 층부터 등장
+    const WIND_GAP_MIN_MS = 9000;        // 돌풍 간 최소 간격
+    const WIND_GAP_MAX_MS = 16000;       // 돌풍 간 최대 간격
+    const WIND_WARN_MS = 1200;           // 예고 시간
+    const WIND_DURATION_MS = 2200;       // 돌풍 지속 시간
+    const WIND_DRAIN_MULT = 1.5;         // 돌풍 중 게이지 감소 배율
+
+    // 마일스톤(100층 단위) 이벤트 설정 — 100, 200, 300...층에 도달하면
+    // 게이지 완전 회복 + 큰 연출이 터지고, 그 직후 몇 칸은 붕괴/황금 계단 없이
+    // 안전하게 지나갈 수 있는 구간이 이어진다.
+    const MILESTONE_SPAN = 100;
+    const MILESTONE_SAFE_STEPS = 4;
+
+    // 웜홀 계단 — 우주 테마 구간(50층 주기 중 4번째)에서만 등장.
+    // 밟으면 몇 층을 한 번에 건너뛰는 워프가 발동한다.
+    // (THEME_FLOOR_SPAN은 아래 렌더링 섹션에 선언되어 있고, genNextStep은
+    //  나중에 호출되는 시점에 참조되므로 여기서 다시 선언할 필요는 없다)
+    const WORMHOLE_MIN_INDEX = 160;   // 우주 구간 진입 후 어느 정도 지나야 등장
+    const WORMHOLE_CHANCE = 0.05;
+    const WORMHOLE_JUMP_MIN = 4;
+    const WORMHOLE_JUMP_MAX = 8;
+
+    // 컨베이어 계단 — 밟으면, 다음 계단이 같은 방향으로 이어지는 경우에 한해
+    // 별도 입력 없이 한 칸 더 자동으로 밀려 나간다.
+    const CONVEYOR_MIN_INDEX = 8;
+    const CONVEYOR_CHANCE = 0.05;
+
+    function genNextStep(prev) {
+      if (runRemaining <= 0) {
+        curDir = curDir === "R" ? "L" : "R";
+        // 층이 오를수록 평균 길이는 짧아지지만, 항상 최소 3가지 이상의 값(2~hi) 중에서
+        // 무작위로 뽑아 특정 고층 구간 이후 패턴이 고정 반복되는 문제를 방지한다.
+        // (기존에는 hi가 2로 수렴해 버려서 결과적으로 매번 2로 고정되고, R/L이 기계적으로
+        //  번갈아가며 반복되는 패턴이 나왔었음)
+        const hi = Math.max(4, 7 - Math.floor(floor / 50));
+        runRemaining = 2 + Math.floor(Math.random() * (hi - 2 + 1)); // [2, hi] 균등 분포
+
+        // 층이 어느 정도 쌓이면 가끔(약 12%) 한 칸 만에 바로 방향을 또 바꾸는
+        // 급커브를 섞어서 예측 불가능성을 높인다.
+        if (floor > 20 && Math.random() < 0.12) runRemaining = 1;
+      }
+      runRemaining--;
+      const dx = curDir === "R" ? STEP_DX : -STEP_DX;
+      const idx = steps.length; // 곧 push될 위치의 인덱스 = 이 계단에 도달했을 때의 층수
+
+      const milestoneMod = idx % MILESTONE_SPAN;
+      const isMilestoneFloor = idx > 0 && milestoneMod === 0;
+      const isMilestoneSafeZone = idx > 0 && milestoneMod > 0 && milestoneMod <= MILESTONE_SAFE_STEPS;
+      const isSpaceEra = Math.floor(idx / THEME_FLOOR_SPAN) % THEMES.length === 3; // THEMES[3] = 우주
+
+      let special = null;
+      const diff = getDifficulty();
+      const goldChance = diff.goldChance * (shopData.upgrades.luckyhand ? 1.2 : 1);
+      if (isMilestoneFloor) {
+        special = "milestone";
+      } else if (isMilestoneSafeZone) {
+        special = null; // 마일스톤 직후 안전 구간 — 붕괴/황금/얼음 계단 생성 안 함
+      } else if (isSpaceEra && idx >= WORMHOLE_MIN_INDEX && prev.special !== "wormhole" && Math.random() < WORMHOLE_CHANCE) {
+        special = "wormhole";
+      } else if (idx >= GOLD_MIN_INDEX && prev.special !== "gold" && prev.special !== "milestone" && Math.random() < goldChance) {
+        special = "gold";
+      } else if (idx >= CRACK_MIN_INDEX && prev.special !== "crack" && Math.random() < diff.crackChance) {
+        special = "crack";
+      } else if (idx >= ICE_MIN_INDEX && prev.special !== "ice" && Math.random() < diff.iceChance) {
+        special = "ice";
+      } else if (idx >= CONVEYOR_MIN_INDEX && prev.special !== "conveyor" && Math.random() < CONVEYOR_CHANCE) {
+        special = "conveyor";
+      }
+      return { x: prev.x + dx, y: prev.y - STEP_DY, dir: curDir, special };
+    }
+
+    function ensureBuffer() {
+      while (steps.length < currentIndex + 24) {
+        steps.push(genNextStep(steps[steps.length - 1]));
+      }
+    }
+
+    function resetGame() {
+      steps = [makeStartStep()];
+      currentIndex = 0;
+      curDir = Math.random() < 0.5 ? "L" : "R";
+      runRemaining = 3;
+      ensureBuffer();
+
+      charPos = { x: steps[0].x, y: steps[0].y };
+      animFrom = animTo = null;
+      isAnimating = false;
+
+      timeMax = TIME_MAX + (shopData.upgrades.headstart ? 15 : 0);
+      timeLeft = timeMax;
+      floor = 0;
+      elapsedPlaying = 0;
+
+      camera.x = charPos.x;
+      camera.y = charPos.y;
+      shake = 0;
+
+      combo = 0;
+      maxComboThisRun = 0;
+      updateComboUI();
+      floatTexts = [];
+      sparkles = [];
+      crackDeadline = null;
+
+      lightning = null;
+      stunUntil = 0;
+      iceSlideUntil = 0;
+      nextLightningAt = performance.now() + LIGHTNING_GAP_MIN_MS + Math.random() * (LIGHTNING_GAP_MAX_MS - LIGHTNING_GAP_MIN_MS);
+
+      wind = null;
+      nextWindAt = performance.now() + WIND_GAP_MIN_MS + Math.random() * (WIND_GAP_MAX_MS - WIND_GAP_MIN_MS);
+
+      updateFloorLabel();
+      updateGauge();
+      updateBestLabel();
+      updateCoinLabels();
+    }
+
+    // ---------- Effects (floating text / sparkles) ----------
+    function spawnFloatText(x, y, text, color) {
+      floatTexts.push({ x, y, text, color, start: performance.now(), life: 750 });
+    }
+
+    function spawnSparkles(x, y, count, color) {
+      for (let i = 0; i < count; i++) {
+        const angle = Math.random() * Math.PI * 2;
+        const speed = 40 + Math.random() * 70;
+        sparkles.push({
+          x, y,
+          vx: Math.cos(angle) * speed,
+          vy: Math.sin(angle) * speed - 40,
+          start: performance.now(),
+          life: 500 + Math.random() * 300,
+          color: color || "#ffe484",
+        });
+      }
+    }
+
+    // ---------- 번개 기믹 ----------
+    function spawnLightning() {
+      ensureBuffer();
+      const ahead = LIGHTNING_AHEAD_MIN + Math.floor(Math.random() * (LIGHTNING_AHEAD_MAX - LIGHTNING_AHEAD_MIN + 1));
+      const targetIndex = currentIndex + ahead;
+      const now = performance.now();
+      lightning = {
+        targetIndex,
+        strikeAt: now + LIGHTNING_WARN_MS,
+        resolved: false,
+        hit: false,
+        resolvedAt: 0,
+      };
+    }
+
+    function resolveLightning() {
+      const now = performance.now();
+      const target = steps[lightning.targetIndex];
+      const hit = currentIndex === lightning.targetIndex;
+      lightning.resolved = true;
+      lightning.hit = hit;
+      lightning.resolvedAt = now;
+
+      if (hit) {
+        stunUntil = now + LIGHTNING_STUN_MS;
+        combo = 0;
+        updateComboUI();
+        shake = Math.max(shake, 1.1);
+        spawnFloatText(target.x, target.y - 50, "감전! 스턴!", "#9fe6ff");
+        spawnSparkles(target.x, target.y - 8, 18, "#bfeaff");
+        playSfx("miss");
+      } else {
+        shake = Math.max(shake, 0.35);
+        spawnFloatText(target.x, target.y - 50, "회피!", "#bff3ff");
+        achData.lightningDodge = (achData.lightningDodge || 0) + 1;
+        saveAchievements();
+        checkAchievements({ floor, maxCombo: maxComboThisRun });
+      }
+
+      nextLightningAt = now + LIGHTNING_GAP_MIN_MS + Math.random() * (LIGHTNING_GAP_MAX_MS - LIGHTNING_GAP_MIN_MS);
+    }
+
+    // ---------- Input ----------
+    function tryStep(pressedDir) {
+      if (state !== "playing") return;
+      if (performance.now() < stunUntil) return; // 감전 스턴 중에는 조작 무시
+      if (performance.now() < iceSlideUntil) return; // 얼음 위에서 미끄러지는 중에는 조작 무시
+      // 이동 애니메이션 도중에도 입력을 즉시 받아, 현재 보간된 위치에서
+      // 다음 계단으로 애니메이션을 이어붙인다 (chain). 이렇게 하면
+      // 입력 속도가 빨라져도 애니메이션 시간(ANIM_MS)에 의해 상승 속도가
+      // 인위적으로 제한되지 않는다. 단, 헛디딤(stumble) 애니메이션 중에는
+      // 이미 게임오버 상태로 전환되므로 위의 state 체크에서 걸러진다.
+      if (isAnimating && animKind === "stumble") return;
+
+      const target = steps[currentIndex + 1];
+      if (target.dir === pressedDir) {
+        // success
+        animFrom = { x: charPos.x, y: charPos.y };
+        animTo = { x: target.x, y: target.y };
+        animStart = performance.now();
+        animKind = "move";
+        isAnimating = true;
+
+        currentIndex++;
+        floor++;
+        combo++;
+        maxComboThisRun = Math.max(maxComboThisRun, combo);
+        updateComboUI();
+        crackDeadline = null; // 이전 계단이 붕괴 계단이었어도 제때 벗어났으므로 해제
+
+        // 콤보가 쌓일수록 회복량 증가 (5콤보당 +2, 최대 +12)
+        const comboExtra = Math.min(12, Math.floor(combo / 5) * 2);
+        let bonus = TIME_BONUS + comboExtra;
+        const isGold = target.special === "gold";
+        const isCrack = target.special === "crack";
+        const isMilestone = target.special === "milestone";
+        const isIce = target.special === "ice";
+        const isWormhole = target.special === "wormhole";
+        const isConveyor = target.special === "conveyor";
+        if (isGold) bonus += GOLD_TIME_BONUS;
+
+        timeLeft = Math.min(timeMax, timeLeft + bonus);
+
+        if (isMilestone) {
+          // 마일스톤(100/200/300...층) — 게이지 완전 회복 + 큰 연출 + 코인 지급
+          timeLeft = timeMax;
+          shopData.coins += 5;
+          saveShop();
+          shake = Math.max(shake, 1.2);
+          spawnFloatText(target.x, target.y - 96, "★ " + floor + "층 돌파! ★", "#7ee8ff");
+          spawnFloatText(target.x, target.y - 66, "게이지 완전 회복! · 🪙+5", "#bff3ff");
+          spawnSparkles(target.x, target.y - 10, 30, "#bff3ff");
+        } else if (isWormhole) {
+          spawnFloatText(target.x, target.y - 46, "🌀 웜홀 발견!", "#c9a0e8");
+        } else if (isGold) {
+          shopData.coins += 1;
+          saveShop();
+          spawnFloatText(target.x, target.y - 46, "GOLD +" + bonus + " · 🪙+1", "#ffd54f");
+          spawnSparkles(target.x, target.y - 10, 16, "#ffe484");
+        } else if (isCrack) {
+          spawnFloatText(target.x, target.y - 46, "위태롭다!", "#ff6b5c");
+        } else if (isIce) {
+          spawnFloatText(target.x, target.y - 46, "미끄러워요!", "#bff0ff");
+          spawnSparkles(target.x, target.y - 6, 10, "#e6faff");
+        } else if (isConveyor) {
+          spawnFloatText(target.x, target.y - 46, "컨베이어 벨트", "#8fe0b8");
+        } else {
+          spawnFloatText(target.x, target.y - 40, "+" + bonus, comboExtra > 0 ? "#ffb15a" : "#fff8e8");
+        }
+        if (combo > 0 && combo % 5 === 0) {
+          spawnFloatText(target.x, target.y - 66, "COMBO x" + combo + "!", "#7ee8ff");
+        }
+
+        // 50층마다 테마 전환 연출 (마일스톤 연출과 겹치면 생략)
+        if (floor % 50 === 0 && !isMilestone) {
+          shake = Math.max(shake, 0.6);
+          spawnFloatText(target.x, target.y - 90, "새로운 구역!", "#fff8e8");
+        }
+
+        if (isCrack) {
+          crackDeadline = performance.now() + CRACK_TIME_MS;
+        }
+        if (isIce) {
+          iceSlideUntil = performance.now() + ICE_SLIDE_MS;
+        }
+
+        ensureBuffer();
+        updateFloorLabel();
+        playSfx("step");
+        checkAchievements({ floor, maxCombo: maxComboThisRun });
+
+        if (isWormhole) triggerWormholeWarp(target);
+        if (isConveyor) tryConveyorAutoAdvance(target);
+      } else {
+        // miss — a single wrong step ends the run immediately
+        animFrom = { x: charPos.x, y: charPos.y };
+        animTo = { x: charPos.x + (pressedDir === "R" ? 10 : -10), y: charPos.y };
+        animStart = performance.now();
+        animKind = "stumble";
+        isAnimating = true;
+
+        shake = 1;
+        combo = 0;
+        updateComboUI();
+        crackDeadline = null;
+        playSfx("miss");
+        triggerGameOver("miss");
+      }
+    }
+
+    // 웜홀에 진입하면 몇 층을 한 번에 건너뛴다 (순간이동 — 애니메이션 없이 스냅)
+    function triggerWormholeWarp(originStep) {
+      const jump = WORMHOLE_JUMP_MIN + Math.floor(Math.random() * (WORMHOLE_JUMP_MAX - WORMHOLE_JUMP_MIN + 1));
+      currentIndex += jump;
+      floor += jump;
+      ensureBuffer();
+
+      const dest = steps[currentIndex];
+      charPos = { x: dest.x, y: dest.y };
+      camera.x = dest.x;
+      camera.y = dest.y;
+      animFrom = animTo = null;
+      isAnimating = false;
+
+      shake = Math.max(shake, 0.8);
+      timeLeft = Math.min(timeMax, timeLeft + jump * 3); // 건너뛴 층수만큼 소량의 게이지 보상
+      spawnFloatText(dest.x, dest.y - 70, "🌀 웜홀 통과! +" + jump + "층", "#c9a0e8");
+      spawnSparkles(originStep.x, originStep.y - 10, 20, "#c9a0e8");
+      spawnSparkles(dest.x, dest.y - 10, 20, "#e0c8ff");
+
+      updateFloorLabel();
+      checkAchievements({ floor, maxCombo: maxComboThisRun });
+    }
+
+    // 컨베이어 계단 — 다음 계단이 같은 방향으로 이어지는 경우에만, 입력 없이
+    // 한 칸 더 자동으로 밀려 나간다. 자동으로 밀려난 계단 자체의 특수효과(붕괴/황금 등)는
+    // 무시한다 (입력으로 직접 밟은 게 아니라서 연쇄로 인한 예기치 못한 효과를 막기 위함).
+    function tryConveyorAutoAdvance(originStep) {
+      ensureBuffer();
+      const next = steps[currentIndex + 1];
+      if (!next || next.dir !== originStep.dir) return;
+
+      currentIndex++;
+      floor++;
+      combo++;
+      maxComboThisRun = Math.max(maxComboThisRun, combo);
+      updateComboUI();
+
+      const carriedBonus = Math.round(TIME_BONUS / 2);
+      timeLeft = Math.min(timeMax, timeLeft + carriedBonus);
+
+      charPos = { x: next.x, y: next.y };
+      animFrom = { x: originStep.x, y: originStep.y };
+      animTo = { x: next.x, y: next.y };
+      animStart = performance.now();
+      animKind = "move";
+      isAnimating = true;
+
+      spawnFloatText(next.x, next.y - 40, "컨베이어! +" + carriedBonus, "#7ee88a");
+      spawnSparkles(originStep.x, originStep.y - 6, 8, "#bff3d0");
+
+      ensureBuffer();
+      updateFloorLabel();
+      checkAchievements({ floor, maxCombo: maxComboThisRun });
+    }
+
+    function pressButton(dir, btnEl) {
+      if (settingsOpen) return;
+      if (btnEl) {
+        btnEl.classList.add("pressed");
+        setTimeout(() => btnEl.classList.remove("pressed"), 100);
+      }
+      if (state === "start") {
+        startGame();
+        return;
+      }
+      if (state === "gameover") return;
+      tryStep(dir);
+    }
+
+    const btnLeft = document.getElementById("btnLeft");
+    const btnRight = document.getElementById("btnRight");
+
+    btnLeft.addEventListener("pointerdown", (e) => { e.preventDefault(); pressButton("L", btnLeft); });
+    btnRight.addEventListener("pointerdown", (e) => { e.preventDefault(); pressButton("R", btnRight); });
+
+    window.addEventListener("keydown", (e) => {
+      if (e.repeat) return;
+
+      // 키 재설정 대기 중이면 다음 키 입력을 바인딩으로 저장
+      if (awaitingBind) {
+        e.preventDefault();
+        if (e.code === "Escape") {
+          awaitingBind = null;
+          applySettings();
+          return;
+        }
+        if (awaitingBind === "left") settings.leftKey = e.code;
+        else settings.rightKey = e.code;
+        awaitingBind = null;
+        saveSettings();
+        applySettings();
+        return;
+      }
+
+      if (settingsOpen) {
+        if (e.code === "Escape") { playSfx("click"); closeSettings(); }
+        return;
+      }
+
+      if (e.code === settings.leftKey) pressButton("L", btnLeft);
+      else if (e.code === settings.rightKey) pressButton("R", btnRight);
+    });
+
+    document.getElementById("btnStart").addEventListener("click", () => { playSfx("click"); startGame(); });
+    document.getElementById("btnRetry").addEventListener("click", () => { playSfx("click"); startGame(); });
+
+    function startGame() {
+      resetGame();
+      state = "playing";
+      document.getElementById("startScreen").classList.add("hidden");
+      document.getElementById("gameOverScreen").classList.add("hidden");
+      bgm.currentTime = 0;
+      if (!muted) bgm.play().catch(() => {});
+    }
+
+    function triggerGameOver(reason) {
+      if (state !== "playing") return;
+      state = "gameover";
+
+      const isNewRecord = floor > bestFloor;
+      if (isNewRecord) {
+        bestFloor = floor;
+        saveBest(bestFloor);
+      }
+
+      // 도달 거리에 비례한 코인 보너스 지급 (20층당 1코인)
+      const distanceBonus = Math.floor(floor / 20);
+      if (distanceBonus > 0) {
+        shopData.coins += distanceBonus;
+        saveShop();
+      }
+      updateCoinLabels();
+
+      document.getElementById("finalFloor").textContent = floor;
+      document.getElementById("gameOverTitle").textContent =
+        reason === "miss" ? "헛디뎠다!" :
+        reason === "crack" ? "계단이 무너졌다!" :
+        "시간 초과!";
+      const bestOverEl = document.getElementById("bestFloorOver");
+      bestOverEl.textContent =
+        (isNewRecord ? "🏆 신기록 달성! · " : "최고 기록 " + bestFloor + "층 · ") +
+        (distanceBonus > 0 ? "🪙+" + distanceBonus + " 획득" : "");
+      document.getElementById("gameOverScreen").classList.remove("hidden");
+      bgm.pause();
+      playSfx("gameover");
+    }
+
+    // ---------- HUD ----------
+    const gaugeFillEl = document.getElementById("gaugeFill");
+    const floorNumEl = document.getElementById("floorNum");
+    const comboWrapEl = document.getElementById("comboWrap");
+    const comboRingEl = document.getElementById("comboRing");
+    const comboNumEl = document.getElementById("comboNum");
+    const COMBO_RING_CIRC = 2 * Math.PI * 18;
+
+    function updateComboUI() {
+      if (combo <= 0) {
+        comboWrapEl.classList.add("hidden");
+        return;
+      }
+      comboWrapEl.classList.remove("hidden");
+      comboNumEl.textContent = combo;
+      const progress = (combo % 5) / 5; // 다음 5콤보 보너스까지 진행률
+      comboRingEl.style.strokeDashoffset = COMBO_RING_CIRC * (1 - progress);
+    }
+
+    const toastEl = document.getElementById("toast");
+    let toastTimer = null;
+    function showToast(msg) {
+      toastEl.textContent = msg;
+      toastEl.classList.add("show");
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => toastEl.classList.remove("show"), 2200);
+    }
+
+    function updateGauge() {
+      const pct = (timeLeft / timeMax) * 100;
+      gaugeFillEl.style.width = pct + "%";
+      gaugeFillEl.style.background = pct <= 25
+        ? "linear-gradient(180deg, #ff6b5c, #c72a2a)"
+        : pct <= 55
+          ? "linear-gradient(180deg, #ffcf5c, #d68a1f)"
+          : "linear-gradient(180deg, #7ee88a, #2fa84a)";
+    }
+    function updateFloorLabel() {
+      floorNumEl.textContent = floor;
+    }
+
+    function updateBestLabel() {
+      const startEl = document.getElementById("bestFloorStart");
+      if (startEl) startEl.textContent = "최고 기록 " + bestFloor + "층";
+    }
+
+    // 시간 게이지 감소 속도 — 층이 오를수록 점점 빨리 닳지만, 끝없이 빨라지면
+    // 아무리 잘해도 결국 못 버티는 시점이 와서 게임 진행 자체가 불가능해지므로
+    // 일정 속도(MAX_DRAIN_RATE) 이상으로는 더 빨라지지 않도록 상한을 둔다.
+    // 180층까지는 기존과 동일하게 선형으로 증가하고(밸런스 유지),
+    // 그 이후로는 완만하게(제곱근 곡선) 빨라지다가 상한에서 멈춘다.
+    const MAX_DRAIN_RATE = 20; // 이 값(난이도 배율 적용 전 기준)을 넘지 않음
+    function getDrainRate(f) {
+      const linearPart = Math.min(6, f / 30);
+      const extra = f > 180 ? Math.sqrt(f - 180) * 0.35 : 0;
+      const raw = Math.min(MAX_DRAIN_RATE, BASE_DRAIN_RATE + linearPart + extra);
+      return raw * getDifficulty().drainMult;
+    }
+
+    // ---------- Update ----------
+    function update(dt) {
+      if (state !== "playing") return;
+      if (settingsOpen) return; // 설정 화면이 열려 있으면 게임 진행 일시정지
+
+      elapsedPlaying += dt;
+
+      // 돌풍 기믹 — 예약 시각이 되면 예고 시작, 예고가 끝나면 발동, 지속시간이 지나면 종료
+      if (floor >= WIND_START_FLOOR) {
+        const tNowWind = performance.now();
+        if (!wind && tNowWind >= nextWindAt) {
+          wind = { warnAt: tNowWind, startAt: tNowWind + WIND_WARN_MS, endAt: tNowWind + WIND_WARN_MS + WIND_DURATION_MS };
+          spawnFloatText(charPos.x, charPos.y - 60, "💨 돌풍이 다가온다!", "#cfe8ff");
+        }
+        if (wind && tNowWind >= wind.startAt && tNowWind < wind.startAt + 30) {
+          shake = Math.max(shake, 0.4); // 발동 순간 살짝 흔들림
+        }
+        if (wind && tNowWind >= wind.endAt) {
+          wind = null;
+          nextWindAt = tNowWind + WIND_GAP_MIN_MS + Math.random() * (WIND_GAP_MAX_MS - WIND_GAP_MIN_MS);
+        }
+      }
+      const windActive = wind && performance.now() >= wind.startAt && performance.now() < wind.endAt;
+
+      const rate = getDrainRate(floor) * (windActive ? WIND_DRAIN_MULT : 1);
+      timeLeft = Math.max(0, timeLeft - rate * dt);
+      updateGauge();
+
+      if (timeLeft <= 0) {
+        triggerGameOver("time");
+        return;
+      }
+
+      // 붕괴 계단 위에서 제한시간 내에 벗어나지 못하면 게임오버
+      if (crackDeadline !== null && performance.now() > crackDeadline) {
+        triggerGameOver("crack");
+        return;
+      }
+
+      // 번개 기믹 — 스폰 예약 시각이 되면 예고 시작, 예고가 끝나면 낙뢰 판정
+      if (floor >= getDifficulty().lightningStartFloor) {
+        const tNow = performance.now();
+        if (!lightning && tNow >= nextLightningAt) {
+          spawnLightning();
+        }
+        if (lightning && !lightning.resolved && tNow >= lightning.strikeAt) {
+          resolveLightning();
+        }
+        if (lightning && lightning.resolved && tNow - lightning.resolvedAt > 350) {
+          lightning = null;
+        }
+      }
+
+      // resolve animation
+      if (isAnimating) {
+        const t = Math.min(1, (performance.now() - animStart) / (animKind === "move" ? ANIM_MS : STUMBLE_MS));
+        const ease = 1 - Math.pow(1 - t, 2);
+        charPos.x = animFrom.x + (animTo.x - animFrom.x) * ease;
+        charPos.y = animFrom.y + (animTo.y - animFrom.y) * ease;
+        if (t >= 1) {
+          isAnimating = false;
+          if (animKind === "stumble") {
+            charPos.x = animFrom.x;
+            charPos.y = animFrom.y;
+          } else {
+            charPos.x = animTo.x;
+            charPos.y = animTo.y;
+          }
+        }
+      }
+
+      // camera follows character
+      const followSpeed = 10;
+      camera.x += (charPos.x - camera.x) * Math.min(1, followSpeed * dt);
+      camera.y += (charPos.y - camera.y) * Math.min(1, followSpeed * dt);
+
+      if (shake > 0) shake = Math.max(0, shake - dt * 4);
+
+      // 플로팅 텍스트 수명 관리
+      const now = performance.now();
+      floatTexts = floatTexts.filter(f => now - f.start < f.life);
+
+      // 반짝임 파티클 이동 및 수명 관리
+      for (const s of sparkles) {
+        s.x += s.vx * dt;
+        s.y += s.vy * dt;
+        s.vy += 160 * dt; // 중력
+      }
+      sparkles = sparkles.filter(s => now - s.start < s.life);
+    }
+
+    // ---------- Rendering ----------
+    const COLORS = {
+      skin: "#f0c090",
+      hair: "#2b2118",
+      shirt: "#2f5fa8",
+      pants: "#28324a",
+      tie: "#c23a3a",
+    };
+
+    // 시드 기반 의사난수 — 프레임마다 값이 바뀌지 않도록 정수 시드로 고정된 값을 뽑는다
+    function prand(seed) {
+      const x = Math.sin(seed * 12.9898) * 43758.5453;
+      return x - Math.floor(x);
+    }
+
+    // 50층마다 순환하는 배경 테마
+    const THEME_FLOOR_SPAN = 50;
+    const THEMES = [
+      { // 낮
+        sky: "day",
+        sky1: "#6ec6e8", sky2: "#bfe8f2",
+        buildingA: "#3f7fae", buildingB: "#356a92",
+        brick: "#c9a876", brickDark: "#a8875a", brickLine: "#8a6a42", stepEdge: "#5a4326",
+      },
+      { // 노을
+        sky: "sunset",
+        sky1: "#ff9a56", sky2: "#ffd56b",
+        buildingA: "#a85a7a", buildingB: "#7a3f5e",
+        brick: "#d9a066", brickDark: "#b87f4a", brickLine: "#8a5a32", stepEdge: "#5a3a1e",
+      },
+      { // 밤
+        sky: "night",
+        sky1: "#171a30", sky2: "#2e3560",
+        buildingA: "#2b3156", buildingB: "#1f2440",
+        brick: "#7a7aa0", brickDark: "#585880", brickLine: "#3f3f60", stepEdge: "#26263e",
+      },
+      { // 우주
+        sky: "space",
+        sky1: "#0d0a2b", sky2: "#2a1e5c",
+        buildingA: "#3a2d66", buildingB: "#241a4d",
+        brick: "#9a86c8", brickDark: "#7461a0", brickLine: "#4a3a70", stepEdge: "#2e2350",
+      },
+    ];
+
+    function getTheme() {
+      const idx = Math.floor(floor / THEME_FLOOR_SPAN) % THEMES.length;
+      return THEMES[idx];
+    }
+
+    function worldToScreen(wx, wy) {
+      return {
+        x: viewW / 2 + (wx - camera.x),
+        y: viewH * 0.62 + (wy - camera.y),
+      };
+    }
+
+    // ---------- 배경 장식 (구름/새/별/달/행성/운석) ----------
+    function drawCloudShape(cx, cy, scale) {
+      ctx.beginPath();
+      ctx.ellipse(cx, cy, 26 * scale, 12 * scale, 0, 0, Math.PI * 2);
+      ctx.ellipse(cx + 18 * scale, cy - 6 * scale, 18 * scale, 10 * scale, 0, 0, Math.PI * 2);
+      ctx.ellipse(cx - 18 * scale, cy - 4 * scale, 16 * scale, 9 * scale, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    function drawClouds(theme) {
+      const parallax = camera.x * 0.04;
+      ctx.fillStyle = theme.sky === "sunset" ? "rgba(255, 240, 222, 0.85)" : "rgba(255, 255, 255, 0.88)";
+      const spacing = 190;
+      for (let i = -1; i < 5; i++) {
+        const cx = (i * spacing) - (parallax % spacing) + 40;
+        const cy = 34 + prand(i * 3.1) * 60;
+        const scale = 0.7 + prand(i * 7.7) * 0.6;
+        drawCloudShape(cx, cy, scale);
+      }
+    }
+
+    function drawBirds(theme, now) {
+      ctx.strokeStyle = theme.sky === "sunset" ? "rgba(80, 42, 32, 0.8)" : "rgba(40, 40, 58, 0.75)";
+      ctx.lineWidth = 2;
+      const speed = 26; // 화면 기준 드리프트 속도(px/s) — 카메라와 무관하게 계속 날아간다
+      const cycle = viewW + 220;
+      for (let i = 0; i < 3; i++) {
+        const seedX = prand(i * 5.3) * cycle;
+        const bx = ((now / 1000 * speed + seedX) % cycle) - 110;
+        const by = 46 + prand(i * 9.1) * 84 + Math.sin(now / 500 + i) * 6;
+        const flap = Math.sin(now / 130 + i * 2) * 6;
+        ctx.beginPath();
+        ctx.moveTo(bx - 10, by);
+        ctx.quadraticCurveTo(bx - 4, by - flap, bx, by);
+        ctx.quadraticCurveTo(bx + 4, by - flap, bx + 10, by);
+        ctx.stroke();
+      }
+    }
+
+    function drawStars(now, count) {
+      const shift = camera.x * 0.03;
+      const span = viewW + 40;
+      for (let i = 0; i < count; i++) {
+        const raw = (i * 53) - shift;
+        const x = (((raw % span) + span) % span) - 20;
+        const y = prand(i * 13.7) * viewH * 0.72;
+        const twinkle = 0.35 + 0.65 * Math.abs(Math.sin(now / (500 + (i % 6) * 70) + i));
+        const size = i % 6 === 0 ? 2 : 1;
+        ctx.fillStyle = `rgba(255,255,255,${twinkle})`;
+        ctx.fillRect(x, y, size, size);
+      }
+    }
+
+    function drawMoon() {
+      const parallax = camera.x * 0.02;
+      const mx = viewW * 0.78 - (parallax % 40);
+      const my = viewH * 0.16;
+      ctx.fillStyle = "rgba(255, 248, 220, 0.18)";
+      ctx.beginPath(); ctx.arc(mx, my, 34, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = "#fff6d8";
+      ctx.beginPath(); ctx.arc(mx, my, 22, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = "rgba(210, 200, 165, 0.5)";
+      ctx.beginPath(); ctx.arc(mx - 7, my - 5, 4, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(mx + 6, my + 7, 3, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(mx + 2, my - 8, 2.4, 0, Math.PI * 2); ctx.fill();
+    }
+
+    function drawPlanets() {
+      const parallax = camera.x * 0.015;
+
+      // 고리 달린 보라색 행성
+      const px1 = viewW * 0.22 - (parallax % 50);
+      const py1 = viewH * 0.18;
+      ctx.save();
+      ctx.translate(px1, py1);
+      ctx.rotate(-0.35);
+      ctx.strokeStyle = "rgba(210, 190, 255, 0.55)";
+      ctx.lineWidth = 4;
+      ctx.beginPath(); ctx.ellipse(0, 0, 30, 10, 0, 0, Math.PI * 2); ctx.stroke();
+      ctx.restore();
+      ctx.fillStyle = "#c9a0e8";
+      ctx.beginPath(); ctx.arc(px1, py1, 16, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = "rgba(120, 80, 170, 0.5)";
+      ctx.beginPath(); ctx.arc(px1 - 5, py1 + 4, 6, 0, Math.PI * 2); ctx.fill();
+
+      // 작은 붉은 행성
+      const px2 = viewW * 0.7 - ((parallax * 1.6) % 70);
+      const py2 = viewH * 0.32;
+      ctx.fillStyle = "#e8836a";
+      ctx.beginPath(); ctx.arc(px2, py2, 10, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = "rgba(160, 60, 40, 0.5)";
+      ctx.beginPath(); ctx.arc(px2 + 3, py2 - 2, 3, 0, Math.PI * 2); ctx.fill();
+    }
+
+    function drawNebula() {
+      const parallax = camera.x * 0.01;
+      const blobs = [
+        { xr: 0.15, yr: 0.55, r: 120, color: "rgba(120, 70, 190, 0.16)" },
+        { xr: 0.75, yr: 0.7, r: 150, color: "rgba(60, 120, 200, 0.14)" },
+        { xr: 0.45, yr: 0.3, r: 100, color: "rgba(190, 80, 150, 0.12)" },
+      ];
+      for (const b of blobs) {
+        const bx = viewW * b.xr - (parallax % 60);
+        const by = viewH * b.yr;
+        const g = ctx.createRadialGradient(bx, by, 0, bx, by, b.r);
+        g.addColorStop(0, b.color);
+        g.addColorStop(1, "rgba(0,0,0,0)");
+        ctx.fillStyle = g;
+        ctx.fillRect(bx - b.r, by - b.r, b.r * 2, b.r * 2);
+      }
+    }
+
+    function drawAsteroids(now) {
+      ctx.fillStyle = "rgba(150, 140, 180, 0.6)";
+      const cycle = viewW + 80;
+      for (let i = 0; i < 5; i++) {
+        const speed = 8 + (i % 3) * 4;
+        const seedX = prand(i * 4.4) * cycle;
+        const x = ((now / 1000 * speed + seedX) % cycle) - 40;
+        const y = 40 + prand(i * 8.8) * (viewH * 0.5);
+        const r = 3 + (i % 3);
+        ctx.beginPath();
+        ctx.arc(x, y, r, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    // 건물 창문 — 테마에 따라 불이 켜진 색이 다르고, 낮에는 불이 꺼져 있다
+    function drawWindows(theme, buildings, layer) {
+      let litColor = null;
+      if (theme.sky === "sunset") litColor = "rgba(255, 210, 130, 0.85)";
+      else if (theme.sky === "night") litColor = "rgba(255, 232, 150, 0.9)";
+      else if (theme.sky === "space") litColor = "rgba(190, 225, 255, 0.85)";
+      if (!litColor) return;
+
+      const cellW = 9, cellH = 11, padX = 5, padY = 8;
+      for (const b of buildings) {
+        const cols = Math.max(1, Math.floor((b.bw - padX * 2) / cellW));
+        const rows = Math.max(1, Math.floor((b.bh - padY * 2) / cellH));
+        ctx.fillStyle = litColor;
+        for (let r = 0; r < rows; r++) {
+          for (let c = 0; c < cols; c++) {
+            const seed = layer * 977 + b.i * 131 + r * 17 + c * 7;
+            if (prand(seed) < 0.5) {
+              ctx.fillRect(b.bx + padX + c * cellW, b.by + padY + r * cellH, 4, 5);
+            }
+          }
+        }
+      }
+    }
+
+    function drawBackground(theme) {
+      const g = ctx.createLinearGradient(0, 0, 0, viewH);
+      g.addColorStop(0, theme.sky1);
+      g.addColorStop(1, theme.sky2);
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, viewW, viewH);
+
+      const now = performance.now();
+
+      // 하늘 장식 — 낮/노을엔 구름과 새, 밤엔 별과 달, 우주엔 별과 행성/운석
+      if (theme.sky === "day" || theme.sky === "sunset") {
+        drawClouds(theme);
+        drawBirds(theme, now);
+      } else if (theme.sky === "night") {
+        drawStars(now, 40);
+        drawMoon();
+      } else if (theme.sky === "space") {
+        drawNebula();
+        drawStars(now, 70);
+        drawPlanets();
+        drawAsteroids(now);
+      }
+
+      // simple parallax buildings (blocky) + 창문 — 우주까지 올라가면 건물이 있는 게
+      // 어색하므로, 우주 테마에서는 건물 없이 별/행성/운석만 보이게 한다
+      if (theme.sky !== "space") {
+        const parallax = camera.y * 0.35;
+        ctx.fillStyle = theme.buildingA;
+        const buildingsA = [];
+        for (let i = -2; i < 8; i++) {
+          const bw = 46;
+          const bx = (i * 70) - ((camera.x * 0.25 + 20) % 70);
+          const bh = 90 + ((i * 53) % 120);
+          const by = viewH - bh + (parallax % 200) - 100;
+          ctx.fillRect(bx, by, bw, bh + 400);
+          buildingsA.push({ i, bx, by, bw, bh });
+        }
+        drawWindows(theme, buildingsA, 1);
+
+        ctx.fillStyle = theme.buildingB;
+        const buildingsB = [];
+        for (let i = -2; i < 8; i++) {
+          const bw = 30;
+          const bx = 20 + (i * 90) - ((camera.x * 0.15 + 40) % 90);
+          const bh = 60 + ((i * 37) % 90);
+          const by = viewH - bh + (parallax % 260) - 130;
+          ctx.fillRect(bx, by, bw, bh + 400);
+          buildingsB.push({ i, bx, by, bw, bh });
+        }
+        drawWindows(theme, buildingsB, 2);
+      }
+    }
+
+    function drawStep(step, theme, index) {
+      const p = worldToScreen(step.x, step.y);
+      const w = STEP_DX + 24;
+      const h = 16;
+      const x = p.x - w / 2;
+      const y = p.y;
+      const isGold = step.special === "gold";
+      const isCrack = step.special === "crack";
+      const isMilestone = step.special === "milestone";
+      const isIce = step.special === "ice";
+      const isWormhole = step.special === "wormhole";
+      const isConveyor = step.special === "conveyor";
+      const isActiveCrack = isCrack && index === currentIndex && crackDeadline !== null;
+
+      // shadow/support column — 짧은 받침대만 그려서 여러 계단의 그림자가
+      // 같은 x축에서 겹겹이 쌓여 검은 띠로 보이는 문제를 방지
+      const legH = Math.min(46, Math.max(0, viewH - (y + h)));
+      if (legH > 0) {
+        ctx.fillStyle = "rgba(0,0,0,0.12)";
+        ctx.fillRect(x + 6, y + h, w - 12, legH);
+      }
+
+      if (isGold) {
+        // 은은하게 맥동하는 후광
+        const pulse = 0.5 + 0.5 * Math.sin(performance.now() / 220);
+        ctx.fillStyle = `rgba(255, 213, 79, ${0.18 + pulse * 0.18})`;
+        ctx.fillRect(x - 6, y - 6, w + 12, h + 12);
+      }
+      if (isMilestone) {
+        // 마일스톤 계단 — 더 크고 화려하게 맥동하는 하늘색 후광
+        const pulse = 0.5 + 0.5 * Math.sin(performance.now() / 160);
+        ctx.fillStyle = `rgba(126, 232, 255, ${0.25 + pulse * 0.3})`;
+        ctx.fillRect(x - 12, y - 12, w + 24, h + 24);
+      }
+      if (isActiveCrack) {
+        // 위태로운 빨간 경고 후광 (남은 시간이 적을수록 빠르게 깜빡임)
+        const remain = Math.max(0, crackDeadline - performance.now()) / CRACK_TIME_MS;
+        const pulseSpeed = 90 + remain * 150;
+        const pulse = 0.5 + 0.5 * Math.sin(performance.now() / pulseSpeed);
+        ctx.fillStyle = `rgba(255, 60, 40, ${0.22 + pulse * 0.22})`;
+        ctx.fillRect(x - 6, y - 6, w + 12, h + 12);
+      }
+      if (isIce) {
+        // 차갑게 반짝이는 은은한 광택
+        const pulse = 0.5 + 0.5 * Math.sin(performance.now() / 260);
+        ctx.fillStyle = `rgba(170, 230, 255, ${0.14 + pulse * 0.14})`;
+        ctx.fillRect(x - 4, y - 4, w + 8, h + 8);
+      }
+      if (isWormhole) {
+        // 소용돌이치는 보라색 후광
+        const pulse = 0.5 + 0.5 * Math.sin(performance.now() / 140);
+        ctx.fillStyle = `rgba(180, 120, 230, ${0.28 + pulse * 0.28})`;
+        ctx.fillRect(x - 12, y - 12, w + 24, h + 24);
+      }
+      if (isConveyor) {
+        // 은은한 연두색 광택 (벨트 느낌)
+        const pulse = 0.5 + 0.5 * Math.sin(performance.now() / 200);
+        ctx.fillStyle = `rgba(130, 220, 160, ${0.14 + pulse * 0.14})`;
+        ctx.fillRect(x - 4, y - 4, w + 8, h + 8);
+      }
+
+      // brick platform
+      ctx.fillStyle = isMilestone ? "#7ee8ff" : isWormhole ? "#a86ee8" : isGold ? "#ffd54f" : isCrack ? "#8a5648" : isIce ? "#bdeeff" : isConveyor ? "#9adcae" : theme.brick;
+      ctx.fillRect(x, y, w, h);
+      ctx.fillStyle = isMilestone ? "#3fa8c8" : isWormhole ? "#6a3ea8" : isGold ? "#e0a835" : isCrack ? "#6a3e34" : isIce ? "#7cc9e8" : isConveyor ? "#5aa870" : theme.brickDark;
+      ctx.fillRect(x, y + h - 5, w, 5);
+
+      // brick pattern lines
+      ctx.strokeStyle = isMilestone ? "#2a7a94" : isWormhole ? "#4a2a78" : isGold ? "#a8781f" : isCrack ? "#3f261f" : isIce ? "#8fd4ee" : isConveyor ? "#3f7a50" : theme.brickLine;
+      ctx.lineWidth = 1;
+      const cell = 12;
+      for (let cx = 0; cx < w; cx += cell) {
+        ctx.beginPath();
+        ctx.moveTo(x + cx, y);
+        ctx.lineTo(x + cx, y + h - 5);
+        ctx.stroke();
+      }
+      ctx.strokeStyle = isMilestone ? "#1c5a70" : isWormhole ? "#341c50" : isGold ? "#7a5814" : isCrack ? "#2a1712" : isIce ? "#4fa0c0" : isConveyor ? "#2a5a38" : theme.stepEdge;
+      ctx.lineWidth = 2;
+      ctx.strokeRect(x + 1, y + 1, w - 2, h - 2);
+
+      if (isCrack) {
+        // 갈라진 균열 선
+        ctx.strokeStyle = "#2a1712";
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(x + w * 0.3, y + 2);
+        ctx.lineTo(x + w * 0.42, y + h * 0.5);
+        ctx.lineTo(x + w * 0.32, y + h - 3);
+        ctx.moveTo(x + w * 0.62, y + 3);
+        ctx.lineTo(x + w * 0.55, y + h * 0.55);
+        ctx.lineTo(x + w * 0.68, y + h - 2);
+        ctx.stroke();
+        ctx.fillStyle = "#ffb15a";
+        ctx.font = "12px monospace";
+        ctx.textAlign = "center";
+        ctx.fillText("⚠", p.x, y - 4);
+      }
+      if (isGold) {
+        // 작은 별 아이콘
+        ctx.fillStyle = "#fff8e0";
+        ctx.font = "12px monospace";
+        ctx.textAlign = "center";
+        ctx.fillText("★", p.x, y - 4);
+      }
+      if (isIce) {
+        // 대각선 광택 줄무늬 + 눈송이 아이콘
+        ctx.strokeStyle = "rgba(255,255,255,0.7)";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(x + w * 0.2, y + h - 3);
+        ctx.lineTo(x + w * 0.38, y + 2);
+        ctx.moveTo(x + w * 0.55, y + h - 3);
+        ctx.lineTo(x + w * 0.73, y + 2);
+        ctx.stroke();
+        ctx.fillStyle = "#eaffff";
+        ctx.font = "12px monospace";
+        ctx.textAlign = "center";
+        ctx.fillText("❄", p.x, y - 4);
+      }
+      if (isMilestone) {
+        // 도달 층수 라벨
+        ctx.fillStyle = "#0d2b36";
+        ctx.font = "bold 13px monospace";
+        ctx.textAlign = "center";
+        ctx.fillText(index + "F", p.x, y - 5);
+      }
+      if (isWormhole) {
+        // 회전하는 소용돌이 아이콘
+        const now2 = performance.now();
+        ctx.save();
+        ctx.translate(p.x, y - 8);
+        ctx.rotate((now2 / 260) % (Math.PI * 2));
+        ctx.strokeStyle = "#f0e0ff";
+        ctx.lineWidth = 1.6;
+        ctx.beginPath();
+        for (let a = 0; a < Math.PI * 2.4; a += 0.3) {
+          const r = a * 1.6;
+          const wx = Math.cos(a) * r * 0.35;
+          const wy = Math.sin(a) * r * 0.35;
+          if (a === 0) ctx.moveTo(wx, wy); else ctx.lineTo(wx, wy);
+        }
+        ctx.stroke();
+        ctx.restore();
+      }
+      if (isConveyor) {
+        // 진행 방향을 가리키는 화살표(체브론) 두 개, 흐르는 것처럼 위치가 순환
+        const now2 = performance.now();
+        const dir = step.dir === "R" ? 1 : -1;
+        const flow = (now2 / 260) % 1;
+        ctx.strokeStyle = "#2a5a38";
+        ctx.lineWidth = 2;
+        for (let k = 0; k < 2; k++) {
+          const cx = x + w * (((flow + k * 0.5) % 1));
+          ctx.beginPath();
+          ctx.moveTo(cx - 5 * dir, y + h * 0.3);
+          ctx.lineTo(cx + 5 * dir, y + h * 0.5);
+          ctx.lineTo(cx - 5 * dir, y + h * 0.7);
+          ctx.stroke();
+        }
+      }
+
+      if (isActiveCrack) {
+        // 탈출 제한시간 카운트다운 바
+        const remain = Math.max(0, crackDeadline - performance.now()) / CRACK_TIME_MS;
+        const barW = w - 10;
+        ctx.fillStyle = "rgba(0,0,0,0.4)";
+        ctx.fillRect(x + 5, y - 14, barW, 5);
+        ctx.fillStyle = remain > 0.35 ? "#ffcf5c" : "#ff6b5c";
+        ctx.fillRect(x + 5, y - 14, barW * remain, 5);
+      }
+
+      // 번개 예고/낙뢰 이펙트
+      if (lightning && index === lightning.targetIndex) {
+        const now = performance.now();
+        if (!lightning.resolved) {
+          // 예고 단계 — 남은 시간이 적을수록 빠르게 깜빡이는 경고 표시 + 하늘에서 내려오는 광선
+          const remain = Math.max(0, (lightning.strikeAt - now) / LIGHTNING_WARN_MS);
+          const pulseSpeed = 70 + remain * 160;
+          const pulse = 0.5 + 0.5 * Math.sin(now / pulseSpeed);
+
+          ctx.fillStyle = `rgba(150, 220, 255, ${0.10 + pulse * 0.12})`;
+          ctx.fillRect(p.x - 5, -40, 10, y - -40);
+
+          ctx.fillStyle = `rgba(255, 60, 220, ${0.25 + pulse * 0.25})`;
+          ctx.beginPath();
+          ctx.ellipse(p.x, y + h - 2, w * 0.42, 7, 0, 0, Math.PI * 2);
+          ctx.fill();
+
+          ctx.fillStyle = "#fff8e0";
+          ctx.font = "14px monospace";
+          ctx.textAlign = "center";
+          ctx.globalAlpha = 0.55 + pulse * 0.45;
+          ctx.fillText("⚡", p.x, y - 14);
+          ctx.globalAlpha = 1;
+        } else if (now - lightning.resolvedAt < 220) {
+          // 낙뢰 순간 — 강한 섬광 + 그을린 자국
+          const t = (now - lightning.resolvedAt) / 220;
+          const flashAlpha = Math.max(0, 1 - t);
+          ctx.fillStyle = lightning.hit ? `rgba(210, 240, 255, ${flashAlpha})` : `rgba(210, 240, 255, ${flashAlpha * 0.6})`;
+          ctx.fillRect(p.x - w * 0.6, -40, w * 1.2, y + h + 40);
+          ctx.fillStyle = "rgba(40, 20, 10, 0.5)";
+          ctx.beginPath();
+          ctx.ellipse(p.x, y + h - 2, w * 0.38, 6, 0, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+    }
+
+    function drawCharacter() {
+      const now = performance.now();
+      const stunned = now < stunUntil;
+      const sliding = !stunned && now < iceSlideUntil;
+      const p = worldToScreen(charPos.x, charPos.y);
+      const facing = curDir === "R" ? 1 : -1;
+      const bob = isAnimating && animKind === "move" ? -6 : 0;
+      const wobble = stunned
+        ? Math.sin(now / 24) * 4
+        : sliding
+        ? Math.sin(now / 45) * 2
+        : (isAnimating && animKind === "stumble" ? Math.sin(now / 20) * 3 : 0);
+
+      const skinDef = getEquippedSkin();
+      const col = skinDef.colors;
+
+      ctx.save();
+      ctx.translate(p.x + wobble, p.y - 30 + bob);
+      ctx.scale(facing, 1);
+      if (stunned) {
+        // 감전 중에는 파랗게 깜빡이는 스파크와 함께 캐릭터가 파르르 떨린다
+        ctx.globalAlpha = 0.6 + 0.4 * Math.sin(now / 45);
+      }
+
+      // legs
+      ctx.fillStyle = col.pants;
+      ctx.fillRect(-8, 14, 6, 12);
+      ctx.fillRect(2, 14, 6, 12);
+
+      // torso
+      ctx.fillStyle = col.shirt;
+      ctx.fillRect(-9, -4, 18, 20);
+
+      // tie
+      ctx.fillStyle = col.tie;
+      ctx.fillRect(-2, -3, 4, 12);
+
+      // arms
+      ctx.fillStyle = col.shirt;
+      ctx.fillRect(-13, -2, 5, 12);
+      ctx.fillRect(8, -2, 5, 12);
+
+      // head
+      ctx.fillStyle = col.skin;
+      ctx.fillRect(-8, -20, 16, 16);
+
+      // hair
+      ctx.fillStyle = col.hair;
+      ctx.fillRect(-8, -22, 16, 5);
+
+      // eye
+      ctx.fillStyle = "#1a1a1a";
+      ctx.fillRect(4, -13, 2, 2);
+
+      ctx.restore();
+
+      if (skinDef.sparkle && isAnimating && animKind === "move" && Math.random() < 0.4) {
+        // 골드 슈트 전용 — 이동할 때 은은하게 반짝임
+        spawnSparkles(charPos.x, charPos.y - 20, 1, "#ffe9a0");
+      }
+
+      if (stunned) {
+        // 캐릭터 머리 위에 맴도는 번개 아이콘으로 스턴 상태를 명확히 표시
+        ctx.save();
+        ctx.font = "16px monospace";
+        ctx.textAlign = "center";
+        ctx.fillStyle = "#bfeaff";
+        ctx.globalAlpha = 0.7 + 0.3 * Math.sin(now / 60);
+        ctx.fillText("⚡", p.x + Math.sin(now / 50) * 6, p.y - 46 + bob);
+        ctx.restore();
+      } else if (sliding) {
+        // 얼음 위에서 미끄러지는 동안 눈송이 아이콘으로 표시
+        ctx.save();
+        ctx.font = "14px monospace";
+        ctx.textAlign = "center";
+        ctx.fillStyle = "#eaffff";
+        ctx.globalAlpha = 0.8;
+        ctx.fillText("❄", p.x, p.y - 44 + bob);
+        ctx.restore();
+      }
+    }
+
+    function drawEffects() {
+      const now = performance.now();
+
+      // 반짝임 파티클
+      for (const s of sparkles) {
+        const t = (now - s.start) / s.life;
+        const alpha = Math.max(0, 1 - t);
+        const p = worldToScreen(s.x, s.y);
+        ctx.fillStyle = s.color;
+        ctx.globalAlpha = alpha;
+        ctx.fillRect(p.x - 2, p.y - 2, 4, 4);
+      }
+      ctx.globalAlpha = 1;
+
+      // 플로팅 텍스트 (+시간, 콤보, 알림)
+      ctx.textAlign = "center";
+      for (const f of floatTexts) {
+        const t = (now - f.start) / f.life;
+        const alpha = Math.max(0, 1 - t);
+        const rise = t * 26;
+        const p = worldToScreen(f.x, f.y - rise);
+        ctx.globalAlpha = alpha;
+        ctx.font = "bold 14px monospace";
+        ctx.fillStyle = "rgba(0,0,0,0.4)";
+        ctx.fillText(f.text, p.x + 1, p.y + 1);
+        ctx.fillStyle = f.color;
+        ctx.fillText(f.text, p.x, p.y);
+      }
+      ctx.globalAlpha = 1;
+    }
+
+    function drawWindEffect() {
+      if (!wind) return;
+      const now = performance.now();
+      if (now < wind.warnAt || now >= wind.endAt) return;
+      const active = now >= wind.startAt;
+      const alpha = active ? 0.3 : 0.14 + 0.12 * Math.sin(now / 110);
+      const speed = active ? 900 : 260; // px/s
+      const spacing = 70;
+      const offset = (now / 1000 * speed) % spacing;
+
+      ctx.save();
+      ctx.strokeStyle = `rgba(255,255,255,${alpha})`;
+      ctx.lineWidth = 2;
+      for (let i = -2; i < Math.ceil(viewW / spacing) + 2; i++) {
+        const sx = i * spacing - offset;
+        ctx.beginPath();
+        ctx.moveTo(sx, 0);
+        ctx.lineTo(sx - 46, viewH);
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+
+    function render() {
+      const theme = getTheme();
+
+      ctx.save();
+      if (shake > 0) {
+        const sx = (Math.random() - 0.5) * 6 * shake;
+        const sy = (Math.random() - 0.5) * 6 * shake;
+        ctx.translate(sx, sy);
+      }
+
+      drawBackground(theme);
+
+      const lo = Math.max(0, currentIndex - 2);
+      const hi = Math.min(steps.length - 1, currentIndex + 14);
+      for (let i = lo; i <= hi; i++) drawStep(steps[i], theme, i);
+
+      drawCharacter();
+      drawEffects();
+      drawWindEffect();
+
+      ctx.restore();
+
+      // 감전 순간 화면 전체가 짧게 번쩍임
+      if (lightning && lightning.resolved && lightning.hit) {
+        const t = (performance.now() - lightning.resolvedAt) / 220;
+        if (t < 1) {
+          ctx.fillStyle = `rgba(200, 230, 255, ${Math.max(0, 1 - t) * 0.45})`;
+          ctx.fillRect(0, 0, viewW, viewH);
+        }
+      }
+    }
+
+    // ---------- Main loop ----------
+    function loop(now) {
+      if (!lastTime) lastTime = now;
+      const dt = Math.min(0.05, (now - lastTime) / 1000);
+      lastTime = now;
+
+      update(dt);
+      render();
+
+      requestAnimationFrame(loop);
+    }
+
+    resetGame();
+    requestAnimationFrame(loop);
+  })();
+  </script>
+</body>
+</html>
